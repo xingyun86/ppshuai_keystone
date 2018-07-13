@@ -1,0 +1,43 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "keystone", "llvm\keystone\keystone.vcxproj", "{3F8BE7DC-9941-3707-BB26-868092F7106D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kstool", "kstool\kstool.vcxproj", "{621C5E92-45FE-30A5-B813-A73055EC665A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3F8BE7DC-9941-3707-BB26-868092F7106D} = {3F8BE7DC-9941-3707-BB26-868092F7106D}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Debug|Win32.Build.0 = Debug|Win32
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Debug|x64.ActiveCfg = Debug|x64
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Debug|x64.Build.0 = Debug|x64
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Release|Win32.ActiveCfg = Release|Win32
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Release|Win32.Build.0 = Release|Win32
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Release|x64.ActiveCfg = Release|x64
+		{3F8BE7DC-9941-3707-BB26-868092F7106D}.Release|x64.Build.0 = Release|x64
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Debug|Win32.Build.0 = Debug|Win32
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Debug|x64.ActiveCfg = Debug|x64
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Debug|x64.Build.0 = Debug|x64
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Release|Win32.ActiveCfg = Release|Win32
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Release|Win32.Build.0 = Release|Win32
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Release|x64.ActiveCfg = Release|x64
+		{621C5E92-45FE-30A5-B813-A73055EC665A}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A2760A46-9DC5-3FE1-9CE9-0DE06C56D772}
+	EndGlobalSection
+EndGlobal
