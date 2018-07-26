@@ -733,7 +733,8 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 } // end namespace fs
 
 namespace path {
-static bool getKnownFolderPath(KNOWNFOLDERID folderId,
+//#if (NTDDI_VERSION >= NTDDI_VISTA)
+/*static bool getKnownFolderPath(KNOWNFOLDERID folderId,
                                SmallVectorImpl<char> &result) {
   wchar_t *path = nullptr;
   if (::SHGetKnownFolderPath(folderId, KF_FLAG_CREATE, nullptr, &path) != S_OK)
@@ -751,7 +752,25 @@ bool getUserCacheDir(SmallVectorImpl<char> &Result) {
 bool home_directory(SmallVectorImpl<char> &result) {
   return getKnownFolderPath(FOLDERID_Profile, result);
 }
+#else*/
+static bool getKnownFolderPath(int csidl,
+                               SmallVectorImpl<char> &result) {
+	wchar_t szPath[MAX_PATH] = { 0 };
+	if(SUCCEEDED(SHGetFolderPathW(NULL, csidl | CSIDL_FLAG_CREATE, NULL, 0, szPath)))
+	{
+		 return !UTF16ToUTF8(szPath, ::wcslen(szPath), result);
+	}
+	return false;
+}
 
+bool getUserCacheDir(SmallVectorImpl<char> &Result) {
+  return getKnownFolderPath(CSIDL_LOCAL_APPDATA, Result);
+}
+
+bool home_directory(SmallVectorImpl<char> &result) {
+  return getKnownFolderPath(CSIDL_PROFILE, result);
+}
+//#endif
 static bool getTempDirEnvVar(const wchar_t *Var, SmallVectorImpl<char> &Res) {
   SmallVector<wchar_t, 1024> Buf;
   size_t Size = 1024;

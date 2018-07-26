@@ -107,7 +107,9 @@
     </Midl>
     <Lib />
     <Lib>
-      <AdditionalDependencies>shell32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <MinimumRequiredVersion>5.01</MinimumRequiredVersion>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>
@@ -148,7 +150,9 @@
     </Midl>
     <Lib />
     <Lib>
-      <AdditionalDependencies>shell32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>
@@ -189,7 +193,9 @@
     </Midl>
     <Lib />
     <Lib>
-      <AdditionalDependencies>shell32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <MinimumRequiredVersion>5.01</MinimumRequiredVersion>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>
@@ -230,7 +236,9 @@
     </Midl>
     <Lib />
     <Lib>
-      <AdditionalDependencies>shell32.lib;</AdditionalDependencies>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
     </Lib>
     <ProjectReference>
       <LinkLibraryDependencies>
