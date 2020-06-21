@@ -1,59 +1,33 @@
-//! Keystone Assembler Engine (www.keystone-engine.org) */
-//! By Nguyen Anh Quynh <aquynh@gmail.com>, 2016 */
-//! Rust bindings by Remco Verhoef <remco@dutchcoders.io>, 2016 */
+//! Keystone Assembler Engine (www.keystone-engine.org) \
+//! By Nguyen Anh Quynh <aquynh@gmail.com>, 2016 \
+//! Rust bindings by Remco Verhoef <remco@dutchcoders.io>, 2016
 //!
 //! ```rust
 //! extern crate keystone;
-//! use keystone::{Keystone, Arch, OptionType};
+//! use keystone::{Keystone, Arch, Mode, OptionType, OptionValue};
 //!
 //! fn main() {
-//!     let engine = Keystone::new(Arch::X86, keystone::MODE_32)
+//!     let engine = Keystone::new(Arch::X86, Mode::MODE_32)
 //!         .expect("Could not initialize Keystone engine");
-//!     engine.option(OptionType::SYNTAX, keystone::OPT_SYNTAX_NASM)
+//!     engine.option(OptionType::SYNTAX, OptionValue::SYNTAX_NASM)
 //!         .expect("Could not set option to nasm syntax");
 //!     let result = engine.asm("mov ah, 0x80".to_string(), 0)
 //!         .expect("Could not assemble");
 //! }
 //! ```
 
-#![doc(html_root_url="https://keystone/doc/here/v1")]
-
-#[macro_use]
-extern crate bitflags;
+extern crate keystone_sys as ffi;
 extern crate libc;
 
-pub mod ffi;
-// pub mod enums;
-pub mod keystone_const;
-// pub mod arm64_const;
-// pub mod arm_const;
-// pub mod hexagon_const;
-// pub mod mips_const;
-// pub mod ppc_const;
-// pub mod sparc_const;
-// pub mod systemz_const;
-// pub mod x86_const;
+use std::{
+    convert::TryInto,
+    ffi::{CStr, CString},
+    fmt,
+    ops::Not,
+};
 
-use std::ffi::CStr;
-use std::ffi::CString;
-use std::fmt;
-
-pub use keystone_const::*;
-
-#[allow(non_camel_case_types)]
-pub type ks_handle = libc::size_t;
-
-impl Error {
-    pub fn msg(&self) -> String {
-        error_msg(*self)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.msg())
-    }
-}
+pub use ffi::keystone_const::*;
+pub use ffi::ks_handle;
 
 #[derive(Debug, PartialEq)]
 pub struct AsmResult {
@@ -64,8 +38,8 @@ pub struct AsmResult {
 
 impl fmt::Display for AsmResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for byte in &self.bytes {
-            try!(f.write_fmt(format_args!("{:02x}", byte)));
+        for &byte in &self.bytes {
+            f.write_fmt(format_args!("{:02x}", byte))?;
         }
 
         Ok(())
@@ -73,7 +47,7 @@ impl fmt::Display for AsmResult {
 }
 
 pub fn bindings_version() -> (u32, u32) {
-    (KS_API_MAJOR, KS_API_MINOR)
+    (API_MAJOR, API_MINOR)
 }
 
 /// Return tuple `(major, minor)` API version numbers.
@@ -89,12 +63,15 @@ pub fn version() -> (u32, u32) {
 
 /// Return tuple `(major, minor)` API version numbers.
 pub fn arch_supported(arch: Arch) -> bool {
-    unsafe { ffi::ks_arch_supported(arch.val()) }
+    unsafe { ffi::ks_arch_supported(arch) != 0 }
 }
 
-/// Return a string describing given error code.
 pub fn error_msg(error: Error) -> String {
-    unsafe { CStr::from_ptr(ffi::ks_strerror(error.bits())).to_string_lossy().into_owned() }
+    unsafe {
+        CStr::from_ptr(ffi::ks_strerror(error))
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 pub struct Keystone {
@@ -105,37 +82,35 @@ impl Keystone {
     /// Create new instance of Keystone engine.
     pub fn new(arch: Arch, mode: Mode) -> Result<Keystone, Error> {
         if version() != bindings_version() {
-            return Err(ERR_VERSION);
+            return Err(Error::VERSION);
         }
 
-        let mut handle: ks_handle = 0;
+        let mut handle: Option<ks_handle> = None;
 
-        let err = Error::from_bits_truncate(unsafe {
-            ffi::ks_open(arch.val(), mode.bits(), &mut handle)
-        });
-        if err == ERR_OK {
-            Ok(Keystone { handle: handle })
+        let err = unsafe { ffi::ks_open(arch, mode, &mut handle) };
+        if err == Error::OK {
+            Ok(Keystone {
+                handle: handle.expect("Got NULL engine from ks_open()")
+            })
         } else {
             Err(err)
         }
     }
 
     /// Report the last error number when some API function fail.
-    pub fn error(&self) -> Result<(), Error> {
-        let err = Error::from_bits_truncate(unsafe { ffi::ks_errno(self.handle) });
-        if err == ERR_OK {
-            Ok(())
+    pub fn error(&self) -> Option<Error> {
+        let err = unsafe { ffi::ks_errno(self.handle) };
+        if err == Error::OK {
+            None
         } else {
-            Err(err)
+            Some(err)
         }
     }
 
     /// Set option for Keystone engine at runtime
-    pub fn option(&self, type_: OptionType, value: OptionValue) -> Result<(), Error> {
-        let err = Error::from_bits_truncate(unsafe {
-            ffi::ks_option(self.handle, type_.val(), value.bits())
-        });
-        if err == ERR_OK {
+    pub fn option(&self, option_type: OptionType, value: OptionValue) -> Result<(), Error> {
+        let err = unsafe { ffi::ks_option(self.handle, option_type, value) };
+        if err == Error::OK {
             Ok(())
         } else {
             Err(err)
@@ -155,15 +130,18 @@ impl Keystone {
         let mut ptr: *mut libc::c_uchar = std::ptr::null_mut();
 
         let err = Error::from_bits_truncate(unsafe {
-            ffi::ks_asm(self.handle,
-                        s.as_ptr(),
-                        address,
-                        &mut ptr,
-                        &mut size,
-                        &mut stat_count)
+            ffi::ks_asm(
+                self.handle,
+                s.as_ptr(),
+                address,
+                &mut ptr,
+                &mut size,
+                &mut stat_count,
+            )
         });
 
-        if err == ERR_OK {
+        if err == Error::OK {
+            debug_assert!(ptr.is_null().not());
             let bytes_slice = unsafe { std::slice::from_raw_parts(ptr, size) };
             let bytes = bytes_slice.to_vec();
 
@@ -172,12 +150,12 @@ impl Keystone {
             };
 
             Ok(AsmResult {
-                size: size as u32,
-                stat_count: stat_count as u32,
-                bytes
+                size: size.try_into().expect("size_t overflowed u32"),
+                stat_count: stat_count.try_into().expect("size_t overflowed u32"),
+                bytes,
             })
         } else {
-            let err = Error::from_bits_truncate(unsafe { ffi::ks_errno(self.handle) });
+            let err = self.error().unwrap_or(err);
             Err(err)
         }
     }

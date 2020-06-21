@@ -43,6 +43,31 @@ add_library(keystone
   EVMMapping.cpp
 )
 
+if (MSVC)
+    list(APPEND project_name_cflags /W4)
+	list(APPEND project_name_defines WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0501)
+	MESSAGE(STATUS "CMAKE_BUILD_TYPE=" ${CMAKE_BUILD_TYPE})
+
+	set(CompilerFlags
+		CMAKE_CXX_FLAGS
+		CMAKE_CXX_FLAGS_DEBUG
+		CMAKE_CXX_FLAGS_RELEASE
+		CMAKE_C_FLAGS
+		CMAKE_C_FLAGS_DEBUG
+		CMAKE_C_FLAGS_RELEASE
+		)
+	foreach(CompilerFlag ${CompilerFlags})
+		string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+	endforeach()
+	
+	target_compile_definitions(keystone
+							PRIVATE ${project_name_defines}
+							)
+	target_compile_options(keystone
+							PRIVATE ${project_name_cflags}
+	)
+endif(MSVC)
+
 install(TARGETS keystone DESTINATION lib${LLVM_LIBDIR_SUFFIX})
 
 set_target_properties(

@@ -1,5 +1,5 @@
 // Kstool for Keystone Assembler Engine.
-// By Nguyen Anh Quynh, 2016
+// By Nguyen Anh Quynh, 2016-2020
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -14,11 +14,15 @@
 
 #include <keystone/keystone.h>
 
+#if defined(WIN32) || defined(WIN64) || defined(_WIN32) || defined(_WIN64)
+#include "getopt.h"
+#endif
+
 static void usage(char *prog)
 {
-    printf("Kstool v%u.%u.%u for Keystone Assembler Engine (www.keystone-engine.org)\nBy Nguyen Anh Quynh, 2016-2018\n\n",
+    printf("Kstool v%u.%u.%u for Keystone Assembler Engine (www.keystone-engine.org)\nBy Nguyen Anh Quynh, 2016-2020\n\n",
             KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_EXTRA);
-    printf("Syntax: %s <arch+mode> <assembly-string> [start-address-in-hex-format]\n", prog);
+    printf("Syntax: %s [-b] <arch+mode> <assembly-string> [start-address-in-hex-format]\n", prog);
     printf("\nThe following <arch+mode> options are supported:\n");
 
     if (ks_arch_supported(KS_ARCH_X86)) {
@@ -68,7 +72,6 @@ static void usage(char *prog)
     if (ks_arch_supported(KS_ARCH_SPARC)) {
         printf("        sparc:     Sparc - little endian\n");
         printf("        sparcbe:   Sparc - big endian\n");
-        printf("        sparc64:   Sparc64 - little endian\n");
         printf("        sparc64be: Sparc64 - big endian\n");
     }
 
@@ -80,7 +83,8 @@ static void usage(char *prog)
         printf("        evm:       Ethereum Virtual Machine\n");
     }
 
-    printf("\n");
+    printf("\nExtra options:\n");
+    printf("        -b binary output\n\n");
 }
 
 int main(int argc, char **argv)
@@ -91,17 +95,35 @@ int main(int argc, char **argv)
     uint64_t start_addr = 0;
     char *input = NULL;
     size_t count;
-    unsigned char *insn;
+    unsigned char *insn = NULL;
     size_t size;
+    bool binary_output = false;
+    int c;
+    int args_left;
 
-    if (argc == 2) {
+    while ((c = getopt(argc, argv, "bh")) != -1) {
+      switch (c) {
+        case 'b':
+          binary_output = true;
+          break;
+        case 'h':
+          usage(argv[0]);
+          return 0;
+        default:
+          usage(argv[0]);
+          return -1;
+      }
+    }
+
+    args_left = argc - optind;
+    if (args_left == 1) {
         // handle code from stdin
 #if !defined(WIN32) && !defined(WIN64) && !defined(_WIN32) && !defined(_WIN64)
         int flags;
         size_t index = 0;
         char buf[1024];
 
-        mode = argv[1];
+        mode = argv[optind];
 
         if ((flags = fcntl(STDIN_FILENO, F_GETFL, 0)) == -1)
             flags = 0;
@@ -109,7 +131,7 @@ int main(int argc, char **argv)
         fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
         while(fgets(buf, sizeof(buf), stdin)) {
-            input = (char*)realloc(assembly, index + strlen(buf));
+            input = (char*)realloc(input, index + strlen(buf));
             if (!input) {
                 printf("Failed to allocate memory.");
                 return 1;
@@ -130,17 +152,17 @@ int main(int argc, char **argv)
         usage(argv[0]);
         return -1;
 #endif
-    } else if (argc == 3) {
+    } else if (args_left == 2) {
         // kstool <arch> <assembly>
-        mode = argv[1];
-        assembly = argv[2];
-    } else if (argc == 4) {
+        mode = argv[optind];
+        assembly = argv[optind + 1];
+    } else if (args_left == 3) {
         // kstool <arch> <assembly> <address>
         char *temp;
-        mode = argv[1];
-        assembly = argv[2];
-        start_addr = strtoull(argv[3], &temp, 16);
-        if (temp == argv[3] || *temp != '\0' || errno == ERANGE) {
+        mode = argv[optind];
+        assembly = argv[optind + 1];
+        start_addr = strtoull(argv[optind + 2], &temp, 16);
+        if (temp == argv[optind + 2] || *temp != '\0' || errno == ERANGE) {
             printf("ERROR: invalid address argument, quit!\n");
             return -2;
         }
@@ -273,10 +295,6 @@ int main(int argc, char **argv)
         err = ks_open(KS_ARCH_SPARC, KS_MODE_SPARC32+KS_MODE_BIG_ENDIAN, &ks);
     }
 
-    if (!strcmp(mode, "sparc64")) {
-        err = ks_open(KS_ARCH_SPARC, KS_MODE_SPARC64+KS_MODE_LITTLE_ENDIAN, &ks);
-    }
-
     if (!strcmp(mode, "sparc64be")) {
         err = ks_open(KS_ARCH_SPARC, KS_MODE_SPARC64+KS_MODE_BIG_ENDIAN, &ks);
     }
@@ -298,17 +316,26 @@ int main(int argc, char **argv)
     if (ks_asm(ks, assembly, start_addr, &insn, &size, &count)) {
         printf("ERROR: failed on ks_asm() with count = %zu, error = '%s' (code = %u)\n", count, ks_strerror(ks_errno(ks)), ks_errno(ks));
     } else {
-        size_t i;
-        printf("%s = [ ", assembly);
-        for (i = 0; i < size; i++) {
-            printf("%02x ", insn[i]);
+        if (binary_output) {
+          size_t i;
+          for (i = 0; i < size; ++i) {
+            putchar(insn[i]);
+          }
+        } else {
+          size_t i;
+          printf("%s = [ ", assembly);
+          for (i = 0; i < size; i++) {
+              printf("%02x ", insn[i]);
+          }
+          printf("]\n");
+          //printf("Assembled: %lu bytes, %lu statement(s)\n", size, count);
         }
-        printf("]\n");
-        //printf("Assembled: %lu bytes, %lu statement(s)\n", size, count);
     }
 
     // NOTE: free insn after usage to avoid leaking memory
-    ks_free(insn);
+    if (insn != NULL) {
+        ks_free(insn);
+    }
 
     // close Keystone instance when done
     ks_close(ks);

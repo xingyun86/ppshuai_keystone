@@ -501,6 +501,7 @@ ks_err ks_close(ks_engine *ks)
 
     if (ks->arch == KS_ARCH_EVM) {
         // handle EVM differently
+        delete ks;
         return KS_ERR_OK;
     }
 
@@ -521,6 +522,7 @@ ks_err ks_close(ks_engine *ks)
 KEYSTONE_EXPORT
 ks_err ks_option(ks_engine *ks, ks_opt_type type, size_t value)
 {
+    ks->MAI->setRadix(16);
     switch(type) {
         case KS_OPT_SYNTAX:
             if (ks->arch != KS_ARCH_X86)
